@@ -2,7 +2,8 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import mongoose from 'mongoose';
-import userRouter from './routes/userRoute.js'; // <-- Import your new routes
+import userRouter from './routes/userRoute.js';
+import imageRouter from './routes/imageRoute.js'; // <-- 1. ADD THIS IMPORT
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -23,7 +24,8 @@ const connectDB = async () => {
 connectDB();
 
 // API Endpoints
-app.use('/api/user', userRouter); // <-- Hook up the routes!
+app.use('/api/user', userRouter);
+app.use('/api/image', imageRouter); // <-- 2. ADD THIS LINE
 
 app.get('/', (req, res) => {
   res.send("promptVision API is running!");

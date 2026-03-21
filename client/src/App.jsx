@@ -26,9 +26,9 @@ const App = () => {
       {showLogin && <LoginModal setShowLogin={setShowLogin} setUser={setUser} />}
 
       <Routes>
+        <Route path="/generate" element={<Generate user={user} setUser={setUser} />} />
         <Route path="/" element={<Home />} />
         <Route path="/payment" element={<Payment />} />
-        <Route path="/generate" element={<Generate />} /> 
       </Routes>
     </BrowserRouter>
   );
