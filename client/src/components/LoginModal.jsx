@@ -31,7 +31,7 @@ const LoginModal = ({ setShowLogin, setUser }) => {
       const endpoint = currentState === 'Login' ? '/api/user/login' : '/api/user/register';
       
       // Make the POST request to the Express server
-      const { data } = await axios.post(`http://localhost:5000${endpoint}`, formData);
+      const { data } = await axios.post(`${import.meta.env.VITE_BACKEND_URL}${endpoint}`, formData);
 
       if (data.success) {
         // Save auth data to localStorage so they stay logged in on refresh

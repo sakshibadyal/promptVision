@@ -54,10 +54,10 @@ const handleShare = () => {
 
       // 3. Make the API call to your backend
       const { data } = await axios.post(
-        'http://localhost:5000/api/image/generate',
-        { prompt },
-        { headers: { token } } // Pass token for auth middleware
-      );
+  `${import.meta.env.VITE_BACKEND_URL}/api/image/generate`,
+  { prompt },
+  { headers: { token } } // Pass token for auth middleware
+);
 
       if (data.success) {
         // 4. Show the image and update credits!

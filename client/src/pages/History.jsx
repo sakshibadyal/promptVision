@@ -11,10 +11,10 @@ const History = ({ user }) => {
   const fetchHistory = async () => {
     if (!user) return;
     try {
-      const token = localStorage.getItem('token');
-      const { data } = await axios.get('http://localhost:5000/api/image/history', {
-        headers: { token }
-      });
+  const token = localStorage.getItem('token');
+  const { data } = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/image/history`, {
+    headers: { token }
+  });
 
       if (data.success) {
         setImages(data.images);
@@ -61,10 +61,10 @@ const History = ({ user }) => {
     if (!window.confirm("Are you sure you want to delete this image?")) return;
     
     try {
-      const token = localStorage.getItem('token');
-      const { data } = await axios.delete(`http://localhost:5000/api/image/delete/${id}`, {
-        headers: { token }
-      });
+  const token = localStorage.getItem('token');
+  const { data } = await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/api/image/delete/${id}`, {
+    headers: { token }
+  });
 
       if (data.success) {
         toast.success("Image deleted");

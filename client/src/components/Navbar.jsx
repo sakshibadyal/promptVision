@@ -16,9 +16,9 @@ const Navbar = ({ setShowLogin, user, setUser }) => {
       const token = localStorage.getItem('token');
       if (user && token) {
         try {
-          const { data } = await axios.get('http://localhost:5000/api/user/credits', {
-            headers: { token }
-          });
+  const { data } = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/user/credits`, {
+    headers: { token }
+  });
           
           if (data.success) {
             setUser(prev => ({ ...prev, credits: data.credits }));

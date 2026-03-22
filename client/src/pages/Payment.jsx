@@ -46,10 +46,10 @@ const Payment = ({ user, setUser }) => {
 
       // 2. Ask backend to create an order
       const { data } = await axios.post(
-        'http://localhost:5000/api/user/pay',
-        { planId },
-        { headers: { token } }
-      );
+  `${import.meta.env.VITE_BACKEND_URL}/api/user/pay`,
+  { planId },
+  { headers: { token } }
+);
 
       if (!data.success) {
         toast.error(data.message);
@@ -68,16 +68,16 @@ const Payment = ({ user, setUser }) => {
         handler: async (response) => {
           // 4. On successful payment, verify with backend
           try {
-            const verifyRes = await axios.post(
-              'http://localhost:5000/api/user/verify',
-              {
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
-                credits: data.credits // Pass the credits to add
-              },
-              { headers: { token } }
-            );
+  const verifyRes = await axios.post(
+    `${import.meta.env.VITE_BACKEND_URL}/api/user/verify`,
+    {
+      razorpay_order_id: response.razorpay_order_id,
+      razorpay_payment_id: response.razorpay_payment_id,
+      razorpay_signature: response.razorpay_signature,
+      credits: data.credits // Pass the credits to add
+    },
+    { headers: { token } }
+  );
 
             if (verifyRes.data.success) {
               // Update React state and Local Storage instantly!
