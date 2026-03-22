@@ -65,3 +65,39 @@ export const generateImage = async (req, res) => {
     res.json({ success: false, message: error.message });
   }
 };
+
+// Route: GET /api/image/history
+export const getUserImages = async (req, res) => {
+  try {
+    const { userId } = req.body; // Comes from auth middleware
+    
+    // Fetch all images for this user, sorted by newest first
+    const images = await imageModel.find({ userId }).sort({ createdAt: -1 });
+    
+    res.json({ success: true, images });
+  } catch (error) {
+    console.log(error);
+    res.json({ success: false, message: error.message });
+  }
+};
+
+// Route: DELETE /api/image/delete/:id
+export const deleteImage = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { userId } = req.body;
+
+    // Ensure the image exists and belongs to the user trying to delete it
+    const image = await imageModel.findOne({ _id: id, userId });
+    
+    if (!image) {
+      return res.json({ success: false, message: "Image not found or unauthorized" });
+    }
+
+    await imageModel.findByIdAndDelete(id);
+    res.json({ success: true, message: "Image deleted successfully" });
+  } catch (error) {
+    console.log(error);
+    res.json({ success: false, message: error.message });
+  }
+};

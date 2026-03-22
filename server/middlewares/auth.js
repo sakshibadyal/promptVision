@@ -11,7 +11,13 @@ const authUser = async (req, res, next) => {
     // Decode the token to get the user's ID
     const tokenDecode = jwt.verify(token, process.env.JWT_SECRET);
     
-    // Attach the user ID to the request body so our controllers can use it
+    // === THE FIX ===
+    // If req.body doesn't exist (because it's a GET or DELETE request), initialize it as an empty object!
+    if (!req.body) {
+      req.body = {};
+    }
+    
+    // Now it is safe to attach the userId
     req.body.userId = tokenDecode.id;
     next();
 

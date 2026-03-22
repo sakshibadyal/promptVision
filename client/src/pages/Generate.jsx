@@ -10,6 +10,31 @@ const Generate = ({ user, setUser }) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const navigate = useNavigate();
 
+  const handleDownload = async () => {
+  if (!image) return;
+  try {
+    const response = await fetch(image);
+    const blob = await response.blob();
+    const blobUrl = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.download = `promptVision-${prompt.substring(0, 15).replace(/\s+/g, '-')}.jpg`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    toast.success("Downloading image...");
+  } catch (error) {
+    toast.error("Failed to download image");
+  }
+};
+
+// Share Handler
+const handleShare = () => {
+  if (!image) return;
+  navigator.clipboard.writeText(image);
+  toast.success("Link copied to clipboard!");
+};
+
   const handleGenerate = async (e) => {
     e.preventDefault();
     if (!prompt.trim()) return;
@@ -37,7 +62,18 @@ const Generate = ({ user, setUser }) => {
       if (data.success) {
         // 4. Show the image and update credits!
         setImage(data.imageUrl);
-        setUser({ ...user, credits: data.credits }); // Updates Navbar live
+        
+        // Update the React state (which instantly updates the Navbar)
+        setUser({ ...user, credits: data.credits }); 
+        
+        // === THE FIX ===
+        // Update the browser storage so the new credit amount survives a page refresh!
+        const storedUser = JSON.parse(localStorage.getItem('user'));
+        if (storedUser) {
+          storedUser.credits = data.credits;
+          localStorage.setItem('user', JSON.stringify(storedUser));
+        }
+        
         toast.success("Image generated successfully!");
       } else {
         // Handle no credits or other errors
@@ -95,24 +131,42 @@ const Generate = ({ user, setUser }) => {
 
         {/* === Image Display Area === */}
         <div className="w-full max-w-3xl flex justify-center">
-          {isGenerating && (
-            <div className="w-full aspect-square md:aspect-video bg-zinc-900 rounded-2xl border border-zinc-800 flex flex-col items-center justify-center animate-pulse">
-              <div className="w-12 h-12 border-4 border-pink-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-              <p className="text-zinc-400 font-medium animate-pulse">AI is dreaming...</p>
-            </div>
-          )}
+  {isGenerating && (
+    <div className="w-full aspect-square md:aspect-video bg-zinc-900 rounded-2xl border border-zinc-800 flex flex-col items-center justify-center animate-pulse">
+      <div className="w-12 h-12 border-4 border-pink-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+      <p className="text-zinc-400 font-medium animate-pulse">AI is dreaming...</p>
+    </div>
+  )}
 
-          {image && !isGenerating && (
-            <div className="relative group w-full">
-              <div className="absolute -inset-1 bg-gradient-to-r from-pink-600 to-pink-400 rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-500"></div>
-              <img 
-                src={image} 
-                alt={prompt} 
-                className="relative w-full rounded-2xl border border-zinc-800 shadow-2xl object-cover"
-              />
-            </div>
-          )}
-        </div>
+  {image && !isGenerating && (
+    <div className="relative group w-full flex flex-col items-center">
+      <div className="absolute -inset-1 bg-gradient-to-r from-pink-600 to-pink-400 rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-500"></div>
+      <img 
+        src={image} 
+        alt={prompt} 
+        className="relative w-full rounded-2xl border border-zinc-800 shadow-2xl object-cover mb-4"
+      />
+      
+      {/* NEW: Download & Share Buttons for Generate Page */}
+      <div className="flex gap-4 relative z-10 w-full justify-end">
+        <button 
+          onClick={handleShare}
+          className="flex items-center gap-2 px-5 py-2.5 bg-zinc-900 border border-zinc-700 text-zinc-300 rounded-xl hover:bg-zinc-800 hover:text-white transition-all shadow-lg"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path></svg>
+          Share Link
+        </button>
+        <button 
+          onClick={handleDownload}
+          className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-pink-600 to-pink-500 text-white font-bold rounded-xl hover:from-pink-500 hover:to-pink-400 transition-all shadow-lg shadow-pink-600/20 active:scale-95"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+          Download
+        </button>
+      </div>
+    </div>
+  )}
+</div>
         
       </div>
       <Footer />

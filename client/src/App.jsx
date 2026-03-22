@@ -8,6 +8,7 @@ import Home from './pages/Home';
 import Payment from './pages/Payment';
 import Generate from './pages/Generate';
 import LoginModal from './components/LoginModal';
+import History from './pages/History';
 
 const App = () => {
   const [showLogin, setShowLogin] = useState(false);
@@ -28,7 +29,8 @@ const App = () => {
       <Routes>
         <Route path="/generate" element={<Generate user={user} setUser={setUser} />} />
         <Route path="/" element={<Home />} />
-        <Route path="/payment" element={<Payment />} />
+        <Route path="/payment" element={<Payment user={user} setUser={setUser} />} />
+        <Route path="/history" element={<History user={user} />} />
       </Routes>
     </BrowserRouter>
   );
