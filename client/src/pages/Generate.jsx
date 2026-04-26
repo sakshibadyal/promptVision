@@ -9,6 +9,9 @@ const Generate = ({ user, setUser }) => {
   const [image, setImage] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [showEnhanceBox, setShowEnhanceBox] = useState(false);
+  const [enhancement, setEnhancement] = useState('');
+
   const recognitionRef = useRef(null);
   const navigate = useNavigate();
 
@@ -86,10 +89,10 @@ const Generate = ({ user, setUser }) => {
     toast.success("Link copied to clipboard!");
   };
 
-  const handleGenerate = async (e) => {
+  const handleGenerate = async (e, customPrompt = prompt) => {
     e.preventDefault();
 
-    if (!prompt.trim()) return;
+    if (!customPrompt.trim()) return;
 
     if (!user) {
       toast.error("Please log in to generate images!");
@@ -104,13 +107,12 @@ const Generate = ({ user, setUser }) => {
 
       const { data } = await axios.post(
         `${import.meta.env.VITE_BACKEND_URL}/api/image/generate`,
-        { prompt },
+        { prompt: customPrompt },
         { headers: { token } }
       );
 
       if (data.success) {
         setImage(data.imageUrl);
-
         setUser({ ...user, credits: data.credits });
 
         const storedUser = JSON.parse(localStorage.getItem('user'));
@@ -133,6 +135,24 @@ const Generate = ({ user, setUser }) => {
     }
 
     setIsGenerating(false);
+  };
+
+  const handleEnhance = async () => {
+    if (!enhancement.trim()) {
+      toast.error("Please write what you want to enhance.");
+      return;
+    }
+
+    const enhancedPrompt = `${prompt}. Enhance this image with ${enhancement}.`;
+    setPrompt(enhancedPrompt);
+
+    await handleGenerate(
+      { preventDefault: () => {} },
+      enhancedPrompt
+    );
+
+    setEnhancement('');
+    setShowEnhanceBox(false);
   };
 
   return (
@@ -213,7 +233,14 @@ const Generate = ({ user, setUser }) => {
                 className="relative w-full rounded-2xl border border-zinc-800 shadow-2xl object-cover mb-4"
               />
 
-              <div className="flex gap-4 relative z-10 w-full justify-end">
+              <div className="flex flex-wrap gap-4 relative z-10 w-full justify-end">
+                <button
+                  onClick={() => setShowEnhanceBox(!showEnhanceBox)}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-zinc-900 border border-pink-500/50 text-pink-400 rounded-xl hover:bg-zinc-800 hover:text-pink-300 transition-all shadow-lg"
+                >
+                  Enhance Image ✨
+                </button>
+
                 <button
                   onClick={handleShare}
                   className="flex items-center gap-2 px-5 py-2.5 bg-zinc-900 border border-zinc-700 text-zinc-300 rounded-xl hover:bg-zinc-800 hover:text-white transition-all shadow-lg"
@@ -228,6 +255,30 @@ const Generate = ({ user, setUser }) => {
                   Download
                 </button>
               </div>
+
+              {showEnhanceBox && (
+                <div className="relative z-10 w-full mt-5 bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+                  <p className="text-zinc-400 text-sm mb-3">
+                    What do you want to enhance in this image?
+                  </p>
+
+                  <input
+                    type="text"
+                    value={enhancement}
+                    onChange={(e) => setEnhancement(e.target.value)}
+                    placeholder="Example: more realistic lighting, better face details, cyberpunk background..."
+                    className="w-full bg-[#111111] text-zinc-200 p-3 rounded-lg border border-zinc-700 outline-none focus:border-pink-500 mb-4"
+                  />
+
+                  <button
+                    onClick={handleEnhance}
+                    disabled={isGenerating}
+                    className="px-5 py-2.5 bg-gradient-to-r from-pink-600 to-pink-500 text-white font-bold rounded-xl hover:from-pink-500 hover:to-pink-400 transition-all disabled:opacity-50"
+                  >
+                    Generate Enhanced Image ✨
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
