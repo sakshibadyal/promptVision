@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'react-toastify';
@@ -8,78 +8,123 @@ const Generate = ({ user, setUser }) => {
   const [prompt, setPrompt] = useState('');
   const [image, setImage] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef(null);
   const navigate = useNavigate();
 
-  const handleDownload = async () => {
-  if (!image) return;
-  try {
-    const response = await fetch(image);
-    const blob = await response.blob();
-    const blobUrl = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = blobUrl;
-    link.download = `promptVision-${prompt.substring(0, 15).replace(/\s+/g, '-')}.jpg`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    toast.success("Downloading image...");
-  } catch (error) {
-    toast.error("Failed to download image");
-  }
-};
+  const handleMicClick = () => {
+    const SpeechRecognition =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
 
-// Share Handler
-const handleShare = () => {
-  if (!image) return;
-  navigator.clipboard.writeText(image);
-  toast.success("Link copied to clipboard!");
-};
+    if (!SpeechRecognition) {
+      toast.error("Speech recognition is not supported in this browser. Use Chrome.");
+      return;
+    }
+
+    if (isListening && recognitionRef.current) {
+      recognitionRef.current.stop();
+      setIsListening(false);
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognitionRef.current = recognition;
+
+    recognition.lang = "en-US";
+    recognition.interimResults = false;
+    recognition.continuous = false;
+
+    recognition.onstart = () => {
+      setIsListening(true);
+      toast.info("Listening... Speak now");
+    };
+
+    recognition.onresult = (event) => {
+      const spokenText = event.results[0][0].transcript;
+      setPrompt((prev) => prev ? prev + " " + spokenText : spokenText);
+      toast.success("Voice added to prompt!");
+    };
+
+    recognition.onerror = () => {
+      toast.error("Mic error. Please allow microphone permission.");
+      setIsListening(false);
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+    };
+
+    recognition.start();
+  };
+
+  const handleDownload = async () => {
+    if (!image) return;
+
+    try {
+      const response = await fetch(image);
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = `promptVision-${prompt.substring(0, 15).replace(/\s+/g, '-')}.jpg`;
+
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+
+      toast.success("Downloading image...");
+    } catch (error) {
+      toast.error("Failed to download image");
+    }
+  };
+
+  const handleShare = () => {
+    if (!image) return;
+
+    navigator.clipboard.writeText(image);
+    toast.success("Link copied to clipboard!");
+  };
 
   const handleGenerate = async (e) => {
     e.preventDefault();
+
     if (!prompt.trim()) return;
 
-    // 1. Check if user is logged in before they try to generate
     if (!user) {
       toast.error("Please log in to generate images!");
       return;
     }
 
     setIsGenerating(true);
-    setImage(null); // Clear previous image
+    setImage(null);
 
     try {
-      // 2. Get the JWT token from local storage
       const token = localStorage.getItem('token');
 
-      // 3. Make the API call to your backend
       const { data } = await axios.post(
-  `${import.meta.env.VITE_BACKEND_URL}/api/image/generate`,
-  { prompt },
-  { headers: { token } } // Pass token for auth middleware
-);
+        `${import.meta.env.VITE_BACKEND_URL}/api/image/generate`,
+        { prompt },
+        { headers: { token } }
+      );
 
       if (data.success) {
-        // 4. Show the image and update credits!
         setImage(data.imageUrl);
-        
-        // Update the React state (which instantly updates the Navbar)
-        setUser({ ...user, credits: data.credits }); 
-        
-        // === THE FIX ===
-        // Update the browser storage so the new credit amount survives a page refresh!
+
+        setUser({ ...user, credits: data.credits });
+
         const storedUser = JSON.parse(localStorage.getItem('user'));
         if (storedUser) {
           storedUser.credits = data.credits;
           localStorage.setItem('user', JSON.stringify(storedUser));
         }
-        
+
         toast.success("Image generated successfully!");
       } else {
-        // Handle no credits or other errors
         toast.error(data.message);
+
         if (data.message === "No credits remaining") {
-          navigate('/payment'); // Redirect to buy more credits
+          navigate('/payment');
         }
       }
     } catch (error) {
@@ -93,20 +138,24 @@ const handleShare = () => {
   return (
     <div className="min-h-screen bg-[#050505] font-sans flex flex-col">
       <div className="flex-grow flex flex-col items-center pt-32 pb-20 px-5">
-        
-        {/* Page Titles */}
+
         <div className="max-w-3xl w-full text-center mb-10">
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-white mb-6 tracking-tight">
-            What will you <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-pink-300">create</span> today?
+            What will you{" "}
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-pink-300">
+              create
+            </span>{" "}
+            today?
           </h1>
+
           <p className="text-lg text-zinc-400">
-            Describe the image you want to see. The more details, the better the result.
+            Describe the image you want to see. You can type or use your voice.
           </p>
         </div>
 
-        {/* Prompt Input Box */}
         <form onSubmit={handleGenerate} className="w-full max-w-3xl relative mb-12">
           <div className="relative flex flex-col bg-zinc-900/80 border border-zinc-800 rounded-2xl p-2 shadow-[0_0_30px_rgba(236,72,153,0.05)] focus-within:border-pink-500/50 focus-within:shadow-[0_0_40px_rgba(236,72,153,0.15)] transition-all duration-300">
+
             <textarea
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
@@ -114,61 +163,77 @@ const handleShare = () => {
               className="w-full bg-transparent text-zinc-200 p-4 min-h-[140px] resize-none outline-none placeholder:text-zinc-600 text-lg"
               disabled={isGenerating}
             />
+
             <div className="flex justify-between items-center p-2 border-t border-zinc-800/50 mt-2">
               <span className="text-xs text-zinc-500 ml-2">
                 {user ? `Credits remaining: ${user.credits}` : 'Log in to generate'}
               </span>
-              <button 
-                type="submit"
-                disabled={isGenerating}
-                className="px-6 py-2.5 bg-gradient-to-r from-pink-600 to-pink-500 text-white font-bold rounded-xl hover:from-pink-500 hover:to-pink-400 transition-all shadow-lg shadow-pink-600/20 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-              >
-                {isGenerating ? "Generating..." : "Generate ✨"}
-              </button>
+
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleMicClick}
+                  disabled={isGenerating}
+                  className={`px-4 py-2.5 rounded-xl border font-semibold transition-all active:scale-95 ${
+                    isListening
+                      ? "bg-pink-600 text-white border-pink-500 animate-pulse"
+                      : "bg-zinc-900 border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-white"
+                  }`}
+                >
+                  {isListening ? "Listening..." : "🎤 Speak"}
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={isGenerating}
+                  className="px-6 py-2.5 bg-gradient-to-r from-pink-600 to-pink-500 text-white font-bold rounded-xl hover:from-pink-500 hover:to-pink-400 transition-all shadow-lg shadow-pink-600/20 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {isGenerating ? "Generating..." : "Generate ✨"}
+                </button>
+              </div>
             </div>
           </div>
         </form>
 
-        {/* === Image Display Area === */}
         <div className="w-full max-w-3xl flex justify-center">
-  {isGenerating && (
-    <div className="w-full aspect-square md:aspect-video bg-zinc-900 rounded-2xl border border-zinc-800 flex flex-col items-center justify-center animate-pulse">
-      <div className="w-12 h-12 border-4 border-pink-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-      <p className="text-zinc-400 font-medium animate-pulse">AI is dreaming...</p>
-    </div>
-  )}
+          {isGenerating && (
+            <div className="w-full aspect-square md:aspect-video bg-zinc-900 rounded-2xl border border-zinc-800 flex flex-col items-center justify-center animate-pulse">
+              <div className="w-12 h-12 border-4 border-pink-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+              <p className="text-zinc-400 font-medium animate-pulse">AI is dreaming...</p>
+            </div>
+          )}
 
-  {image && !isGenerating && (
-    <div className="relative group w-full flex flex-col items-center">
-      <div className="absolute -inset-1 bg-gradient-to-r from-pink-600 to-pink-400 rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-500"></div>
-      <img 
-        src={image} 
-        alt={prompt} 
-        className="relative w-full rounded-2xl border border-zinc-800 shadow-2xl object-cover mb-4"
-      />
-      
-      {/* NEW: Download & Share Buttons for Generate Page */}
-      <div className="flex gap-4 relative z-10 w-full justify-end">
-        <button 
-          onClick={handleShare}
-          className="flex items-center gap-2 px-5 py-2.5 bg-zinc-900 border border-zinc-700 text-zinc-300 rounded-xl hover:bg-zinc-800 hover:text-white transition-all shadow-lg"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path></svg>
-          Share Link
-        </button>
-        <button 
-          onClick={handleDownload}
-          className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-pink-600 to-pink-500 text-white font-bold rounded-xl hover:from-pink-500 hover:to-pink-400 transition-all shadow-lg shadow-pink-600/20 active:scale-95"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-          Download
-        </button>
+          {image && !isGenerating && (
+            <div className="relative group w-full flex flex-col items-center">
+              <div className="absolute -inset-1 bg-gradient-to-r from-pink-600 to-pink-400 rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-500"></div>
+
+              <img
+                src={image}
+                alt={prompt}
+                className="relative w-full rounded-2xl border border-zinc-800 shadow-2xl object-cover mb-4"
+              />
+
+              <div className="flex gap-4 relative z-10 w-full justify-end">
+                <button
+                  onClick={handleShare}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-zinc-900 border border-zinc-700 text-zinc-300 rounded-xl hover:bg-zinc-800 hover:text-white transition-all shadow-lg"
+                >
+                  Share Link
+                </button>
+
+                <button
+                  onClick={handleDownload}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-pink-600 to-pink-500 text-white font-bold rounded-xl hover:from-pink-500 hover:to-pink-400 transition-all shadow-lg shadow-pink-600/20 active:scale-95"
+                >
+                  Download
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
       </div>
-    </div>
-  )}
-</div>
-        
-      </div>
+
       <Footer />
     </div>
   );

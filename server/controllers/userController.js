@@ -152,3 +152,47 @@ export const verifyPayment = async (req, res) => {
     res.json({ success: false, message: error.message });
   }
 };
+
+export const dummyPayment = async (req, res) => {
+  try {
+    const { userId, planId } = req.body;
+
+    let credits;
+
+    switch (planId) {
+      case 'Personal':
+        credits = 2;
+        break;
+
+      case 'Creator':
+        credits = 19;
+        break;
+
+      case 'Business':
+        credits = 99;
+        break;
+
+      default:
+        return res.json({ success: false, message: "Invalid plan selected" });
+    }
+
+    const user = await userModel.findById(userId);
+
+    if (!user) {
+      return res.json({ success: false, message: "User not found" });
+    }
+
+    user.credits += credits;
+    await user.save();
+
+    res.json({
+      success: true,
+      message: "Dummy payment successful! Credits added.",
+      credits: user.credits
+    });
+
+  } catch (error) {
+    console.log(error);
+    res.json({ success: false, message: error.message });
+  }
+};

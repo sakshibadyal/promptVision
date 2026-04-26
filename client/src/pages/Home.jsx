@@ -4,10 +4,10 @@ import About from '../components/About';
 import Steps from '../components/Steps';
 import Footer from '../components/Footer';
 
-const Home = () => {
+const Home = ({ setShowLogin }) => {
   return (
     <div className="min-h-screen bg-gray-50 w-full">
-      <Header />
+      <Header setShowLogin={setShowLogin} />
       <About />
       <Steps />
       <Footer />
