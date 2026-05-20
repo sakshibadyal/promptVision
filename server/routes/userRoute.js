@@ -9,5 +9,6 @@ userRouter.post('/login', loginUser);
 userRouter.post('/pay', authUser, paymentRazorpay);
 userRouter.post('/verify', authUser, verifyPayment);
 userRouter.post('/dummy-pay', authUser, dummyPayment);
+userRouter.get("/credits", authUser, userCredits);
 
 export default userRouter;
