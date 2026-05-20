@@ -9,24 +9,31 @@ const History = ({ user }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchHistory = async () => {
-    if (!user) return;
-    try {
-  const token = localStorage.getItem('token');
-  const { data } = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/image/history`, {
-    headers: { token }
-  });
-
-      if (data.success) {
-        setImages(data.images);
-      } else {
-        toast.error(data.message);
-      }
-    } catch (error) {
-      console.error(error);
-      toast.error("Failed to load history.");
-    }
+  if (!user) {
     setIsLoading(false);
-  };
+    return;
+  }
+
+  try {
+    const token = localStorage.getItem('token');
+
+    const { data } = await axios.get(
+      `${import.meta.env.VITE_BACKEND_URL}/api/image/history`,
+      { headers: { token } }
+    );
+
+    if (data.success) {
+      setImages(data.images);
+    } else {
+      toast.error(data.message);
+    }
+  } catch (error) {
+    console.error(error);
+    toast.error("Failed to load history.");
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   useEffect(() => {
     fetchHistory();
@@ -59,12 +66,12 @@ const History = ({ user }) => {
   // Delete Handler
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this image?")) return;
-    
+
     try {
-  const token = localStorage.getItem('token');
-  const { data } = await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/api/image/delete/${id}`, {
-    headers: { token }
-  });
+      const token = localStorage.getItem('token');
+      const { data } = await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/api/image/delete/${id}`, {
+        headers: { token }
+      });
 
       if (data.success) {
         toast.success("Image deleted");
@@ -101,11 +108,11 @@ const History = ({ user }) => {
             {images.map((img) => (
               <div key={img._id} className="group relative bg-zinc-900 rounded-xl overflow-hidden border border-zinc-800 shadow-lg">
                 <img src={img.imageUrl} alt={img.prompt} className="w-full aspect-square object-cover" />
-                
+
                 {/* Overlay with details and buttons */}
                 <div className="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-between p-4">
                   <p className="text-sm text-zinc-300 line-clamp-3">{img.prompt}</p>
-                  
+
                   <div className="flex justify-end gap-2 mt-2">
                     <button onClick={() => handleDownload(img.imageUrl, img.prompt)} className="p-2 bg-zinc-800 hover:bg-pink-600 text-white rounded-lg transition-colors" title="Download">
                       <FiDownload />
